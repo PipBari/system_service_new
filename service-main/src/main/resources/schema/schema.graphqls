@@ -1,0 +1,49 @@
+type Alert {
+    id: ID!
+    disaster: String!
+    message: String!
+    createdDate: String!
+}
+
+type User {
+    id: ID!
+    firstName: String!
+    secondName: String!
+    telephoneNumber: String!
+    userLocationId: ID
+}
+
+type UserNotification {
+    id: ID!
+    alertMessage: String
+    alertDisaster: String
+    region: String!
+    userFirstName: String!
+    userLastName: String!
+    dataCreate: String!
+}
+
+type Query {
+    allUsers: [User]
+    userById(id: ID!): User
+
+    allAlerts: [Alert]
+    alertById(id: ID!): Alert
+
+    allNotifications: [UserNotification]
+    notificationById(id: ID!): UserNotification
+}
+
+type Mutation {
+    createUser(firstName: String!, secondName: String!, telephoneNumber: String!): User
+    deleteUser(id: ID!): Boolean
+
+    createAlert(disaster: String!, message: String!, createdDate: String!): Alert
+    deleteAlert(id: ID!): Boolean
+
+    createNotification(region: String!,userId: ID!,alertMessage: String,alertDisaster: String,dataCreate: String): UserNotification
+
+    updateNotification(id: ID!,region: String,alertMessage: String,alertDisaster: String,dataCreate: String): UserNotification
+
+    deleteNotification(id: ID!): Boolean
+}
