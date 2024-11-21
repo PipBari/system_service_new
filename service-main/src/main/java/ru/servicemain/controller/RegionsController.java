@@ -8,6 +8,8 @@ import org.springframework.web.bind.annotation.RestController;
 import ru.servicemain.service.RegionsService;
 import ru.systemapi.controllers.RegionsApi;
 import ru.systemapi.dto.RegionsDTO;
+import ru.systemapi.exception.ResourceNotFoundException;
+import ru.systemapi.exception.BadRequestException;
 
 import java.util.List;
 import java.util.UUID;
@@ -27,26 +29,39 @@ public class RegionsController implements RegionsApi {
 
     @Override
     public ResponseEntity<CollectionModel<EntityModel<RegionsDTO>>> getAllRegions() {
-        List<EntityModel<RegionsDTO>> regions = regionsService.getAllRegions().stream()
-                .map(region -> EntityModel.of(region,
-                        linkTo(methodOn(RegionsController.class).getRegionById(region.getId())).withSelfRel(),
-                        linkTo(methodOn(RegionsController.class).getAllRegions()).withRel("all-regions")))
-                .collect(Collectors.toList());
+        try {
+            List<EntityModel<RegionsDTO>> regions = regionsService.getAllRegions().stream()
+                    .map(region -> EntityModel.of(region,
+                            linkTo(methodOn(RegionsController.class).getRegionById(region.getId())).withSelfRel(),
+                            linkTo(methodOn(RegionsController.class).getAllRegions()).withRel("all-regions")))
+                    .collect(Collectors.toList());
 
-        CollectionModel<EntityModel<RegionsDTO>> regionsCollection = CollectionModel.of(regions,
-                linkTo(methodOn(RegionsController.class).getAllRegions()).withSelfRel());
+            CollectionModel<EntityModel<RegionsDTO>> regionsCollection = CollectionModel.of(regions,
+                    linkTo(methodOn(RegionsController.class).getAllRegions()).withSelfRel());
 
-        return ResponseEntity.ok(regionsCollection);
+            return ResponseEntity.ok(regionsCollection);
+        } catch (Exception e) {
+            throw new BadRequestException("Failed to fetch all regions", e.getMessage());
+        }
     }
 
     @Override
     public ResponseEntity<EntityModel<RegionsDTO>> getRegionById(UUID id) {
-        RegionsDTO region = regionsService.getRegionById(id);
+        if (id == null) {
+            throw new BadRequestException("Invalid ID", "Region ID cannot be null");
+        }
 
-        EntityModel<RegionsDTO> regionModel = EntityModel.of(region,
-                linkTo(methodOn(RegionsController.class).getRegionById(id)).withSelfRel(),
-                linkTo(methodOn(RegionsController.class).getAllRegions()).withRel("all-regions"));
+        try {
+            RegionsDTO region = regionsService.getRegionById(id);
+            EntityModel<RegionsDTO> regionModel = EntityModel.of(region,
+                    linkTo(methodOn(RegionsController.class).getRegionById(id)).withSelfRel(),
+                    linkTo(methodOn(RegionsController.class).getAllRegions()).withRel("all-regions"));
 
-        return ResponseEntity.ok(regionModel);
+            return ResponseEntity.ok(regionModel);
+        } catch (ResourceNotFoundException e) {
+            throw new ResourceNotFoundException("Region not found with ID: " + id);
+        } catch (Exception e) {
+            throw new BadRequestException("Failed to fetch region by ID", e.getMessage());
+        }
     }
 }

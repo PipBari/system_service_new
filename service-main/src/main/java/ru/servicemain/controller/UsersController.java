@@ -8,6 +8,8 @@ import org.springframework.web.bind.annotation.RestController;
 import ru.servicemain.service.UsersService;
 import ru.systemapi.controllers.UsersApi;
 import ru.systemapi.dto.UsersDTO;
+import ru.systemapi.exception.ResourceNotFoundException;
+import ru.systemapi.exception.BadRequestException;
 
 import java.util.List;
 import java.util.UUID;
@@ -27,45 +29,77 @@ public class UsersController implements UsersApi {
 
     @Override
     public ResponseEntity<EntityModel<UsersDTO>> getUserById(UUID id) {
-        UsersDTO user = usersService.getUserById(id);
+        if (id == null) {
+            throw new BadRequestException("Invalid ID", "User ID cannot be null");
+        }
 
-        EntityModel<UsersDTO> userModel = EntityModel.of(user,
-                linkTo(methodOn(UsersController.class).getUserById(id)).withSelfRel(),
-                linkTo(methodOn(UsersController.class).getAllUsers()).withRel("all-users"));
+        try {
+            UsersDTO user = usersService.getUserById(id);
 
-        return ResponseEntity.ok(userModel);
+            EntityModel<UsersDTO> userModel = EntityModel.of(user,
+                    linkTo(methodOn(UsersController.class).getUserById(id)).withSelfRel(),
+                    linkTo(methodOn(UsersController.class).getAllUsers()).withRel("all-users"));
+
+            return ResponseEntity.ok(userModel);
+        } catch (ResourceNotFoundException e) {
+            throw new ResourceNotFoundException("User not found with ID: " + id);
+        } catch (Exception e) {
+            throw new BadRequestException("Failed to fetch user by ID", e.getMessage());
+        }
     }
 
     @Override
     public ResponseEntity<CollectionModel<EntityModel<UsersDTO>>> getAllUsers() {
-        List<EntityModel<UsersDTO>> users = usersService.getAllUsers().stream()
-                .map(user -> EntityModel.of(user,
-                        linkTo(methodOn(UsersController.class).getUserById(user.getId())).withSelfRel(),
-                        linkTo(methodOn(UsersController.class).getAllUsers()).withRel("all-users")))
-                .collect(Collectors.toList());
+        try {
+            List<EntityModel<UsersDTO>> users = usersService.getAllUsers().stream()
+                    .map(user -> EntityModel.of(user,
+                            linkTo(methodOn(UsersController.class).getUserById(user.getId())).withSelfRel(),
+                            linkTo(methodOn(UsersController.class).getAllUsers()).withRel("all-users")))
+                    .collect(Collectors.toList());
 
-        CollectionModel<EntityModel<UsersDTO>> usersCollection = CollectionModel.of(users,
-                linkTo(methodOn(UsersController.class).getAllUsers()).withSelfRel());
+            CollectionModel<EntityModel<UsersDTO>> usersCollection = CollectionModel.of(users,
+                    linkTo(methodOn(UsersController.class).getAllUsers()).withSelfRel());
 
-        return ResponseEntity.ok(usersCollection);
+            return ResponseEntity.ok(usersCollection);
+        } catch (Exception e) {
+            throw new BadRequestException("Failed to fetch all users", e.getMessage());
+        }
     }
 
     @Override
     public ResponseEntity<EntityModel<UsersDTO>> createUser(UsersDTO usersDTO) {
-        UsersDTO createdUser = usersService.createUser(usersDTO);
+        if (usersDTO == null) {
+            throw new BadRequestException("Invalid input", "User data cannot be null");
+        }
 
-        EntityModel<UsersDTO> userModel = EntityModel.of(createdUser,
-                linkTo(methodOn(UsersController.class).getUserById(createdUser.getId())).withSelfRel(),
-                linkTo(methodOn(UsersController.class).getAllUsers()).withRel("all-users"));
+        try {
+            UsersDTO createdUser = usersService.createUser(usersDTO);
 
-        return ResponseEntity
-                .created(linkTo(methodOn(UsersController.class).getUserById(createdUser.getId())).toUri())
-                .body(userModel);
+            EntityModel<UsersDTO> userModel = EntityModel.of(createdUser,
+                    linkTo(methodOn(UsersController.class).getUserById(createdUser.getId())).withSelfRel(),
+                    linkTo(methodOn(UsersController.class).getAllUsers()).withRel("all-users"));
+
+            return ResponseEntity
+                    .created(linkTo(methodOn(UsersController.class).getUserById(createdUser.getId())).toUri())
+                    .body(userModel);
+        } catch (Exception e) {
+            throw new BadRequestException("Failed to create user", e.getMessage());
+        }
     }
 
     @Override
     public ResponseEntity<Void> deleteUser(UUID id) {
-        usersService.deleteUser(id);
-        return ResponseEntity.noContent().build();
+        if (id == null) {
+            throw new BadRequestException("Invalid ID", "User ID cannot be null");
+        }
+
+        try {
+            usersService.deleteUser(id);
+            return ResponseEntity.noContent().build();
+        } catch (ResourceNotFoundException e) {
+            throw new ResourceNotFoundException("User not found with ID: " + id);
+        } catch (Exception e) {
+            throw new BadRequestException("Failed to delete user", e.getMessage());
+        }
     }
 }
